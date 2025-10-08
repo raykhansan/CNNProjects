@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dense Layers & Dropout Neural Network Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .network-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 40px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            overflow-x: auto;
+        }
+        
+        .layer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 30px;
+            position: relative;
+        }
+        
+        .layer-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .neurons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .neuron {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .neuron:hover {
+            transform: scale(1.2);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5);
+        }
+        
+        .neuron.active {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            animation: pulse 1s infinite;
+        }
+        
+        .neuron.dropout {
+            background: #95a5a6;
+            opacity: 0.3;
+        }
+        
+        .neuron.relu-zero {
+            background: #34495e;
+            opacity: 0.5;
+        }
+        
+        .neuron.output {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+        
+        .neuron.predicted {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            transform: scale(1.3);
+            animation: glow 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(243, 156, 18, 0.6); }
+            50% { box-shadow: 0 0 30px rgba(243, 156, 18, 0.9); }
+        }
+        
+        .connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .connection {
+            stroke: #bdc3c7;
+            stroke-width: 1;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        
+        .connection.active {
+            stroke: #e74c3c;
+            stroke-width: 3;
+            opacity: 0.8;
+        }
+        
+        .connection.dropout {
+            stroke: #95a5a6;
+            stroke-width: 1;
+            opacity: 0.1;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+            background: #ecf0f1;
+            padding: 25px;
+            border-radius: 15px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px 10px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        .btn.active {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .info-panels {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #3498db;
+        }
+        
+        .info-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .math-formula {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin: 15px 0;
+            font-size: 16px;
+        }
+        
+        .probability-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 20px 0;
+        }
+        
+        .prob-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .prob-label {
+            width: 30px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .prob-fill {
+            flex: 1;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .prob-value {
+            height: 100%;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+        
+        .prob-text {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .layer-info {
+            position: absolute;
+            bottom: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .layer:hover .layer-info {
+            opacity: 1;
+        }
+        
+        .activation-demo {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+        }
+        
+        .activation-chart {
+            text-align: center;
+        }
+        
+        .activation-chart canvas {
+            border: 2px solid #34495e;
+            border-radius: 10px;
+        }
+        
+        .dropout-slider {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .slider {
+            width: 300px;
+            margin: 10px;
+        }
+        
+        .slider-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Dense Layers & Dropout Neural Network</h1>
+        
+        <div class="controls">
+            <button class="btn" onclick="simulateForwardPass()">🚀 Forward Pass</button>
+            <button class="btn" onclick="toggleDropout()">🎯 Toggle Dropout</button>
+            <button class="btn" onclick="showActivations()">📊 Show Activations</button>
+            <button class="btn" onclick="demonstrateReLU()">⚡ ReLU Demo</button>
+            <button class="btn" onclick="demonstrateSoftmax()">🎲 Softmax Demo</button>
+            <button class="btn" onclick="resetNetwork()">🔄 Reset</button>
+        </div>
+        
+        <div class="dropout-slider">
+            <div class="slider-label">Dropout Rate: <span id="dropoutValue">0.5</span></div>
+            <input type="range" class="slider" id="dropoutSlider" min="0" max="1" step="0.1" value="0.5" oninput="updateDropoutRate()">
+        </div>
+        
+        <div class="network-container">
+            <svg class="connections" id="networkSVG"></svg>
+            
+            <!-- Input Layer -->
+            <div class="layer">
+                <div class="layer-title">Input Layer<br>(28×28 = 784)</div>
+                <div class="neurons" id="inputLayer"></div>
+                <div class="layer-info">
+                    Flattened image pixels<br>
+                    784 input features<br>
+                    Values: 0.0 - 1.0
+                </div>
+            </div>
+            
+            <!-- Hidden Layer 1 -->
+            <div class="layer">
+                <div class="layer-title">Dense Layer<br>128 neurons + ReLU</div>
+                <div class="neurons" id="hiddenLayer1"></div>
+                <div class="layer-info">
+                    Fully connected layer<br>
+                    ReLU activation<br>
+                    784 × 128 = 100,352 weights
+                </div>
+            </div>
+            
+            <!-- Dropout Layer -->
+            <div class="layer">
+                <div class="layer-title">Dropout<br>(Training only)</div>
+                <div class="neurons" id="dropoutLayer"></div>
+                <div class="layer-info">
+                    Randomly sets neurons to 0<br>
+                    Prevents overfitting<br>
+                    Rate: <span id="dropoutRateInfo">50%</span>
+                </div>
+            </div>
+            
+            <!-- Hidden Layer 2 -->
+            <div class="layer">
+                <div class="layer-title">Dense Layer<br>64 neurons + ReLU</div>
+                <div class="neurons" id="hiddenLayer2"></div>
+                <div class="layer-info">
+                    Second hidden layer<br>
+                    ReLU activation<br>
+                    128 × 64 = 8,192 weights
+                </div>
+            </div>
+            
+            <!-- Output Layer -->
+            <div class="layer">
+                <div class="layer-title">Output Layer<br>10 neurons + Softmax</div>
+                <div class="neurons" id="outputLayer"></div>
+                <div class="layer-info">
+                    Classification layer<br>
+                    Softmax activation<br>
+                    Probabilities sum to 1.0
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-panels">
+            <div class="info-panel">
+                <h3>🔗 Dense (Fully Connected) Layer</h3>
+                <div class="code-block">
+layers.Dense(128, activation='relu')
+# Every input connects to every output
+# 784 inputs × 128 outputs = 100,352 weights
+                </div>
+                <div class="math-formula">
+                    output = ReLU(input × weights + bias)
+                </div>
+                <p><strong>Dense layers</strong> create connections between every input and every output neuron. Each connection has a learnable weight that determines the strength of the connection.</p>
+            </div>
+            
+            <div class="info-panel">
+                <h3>⚡ ReLU Activation Function</h3>
+                <div class="code-block">
+def relu(x):
+    return max(0, x)
+# Removes negative values
+# Adds non-linearity to the network
+                </div>
+                <div class="math-formula">
+                    ReLU(x) = max(0, x)
+                </div>
+                <p><strong>ReLU</strong> (Rectified Linear Unit) is simple but effective. It helps the network learn complex patterns by introducing non-linearity while being computationally efficient.</p>
+            </div>
+            
+            <div class="info-panel">
+                <h3>🎯 Dropout Regularization</h3>
+                <div class="code-block">
+layers.Dropout(0.5)
+# Randomly sets 50% of neurons to 0
+# Only during training
+# Prevents overfitting
+                </div>
+                <div class="math-formula">
+                    output = input × (random_mask / keep_prob)
+                </div>
+                <p><strong>Dropout</strong> randomly "turns off" neurons during training. This prevents the network from becoming too dependent on specific neurons and improves generalization.</p>
+            </div>
+            
+            <div class="info-panel">
+                <h3>🎲 Softmax Output Layer</h3>
+                <div class="code-block">
+layers.Dense(10, activation='softmax')
+# Converts logits to probabilities
+# All probabilities sum to 1.0
+# Perfect for classification
+                </div>
+                <div class="math-formula">
+                    softmax(xi) = e^xi / Σ(e^xj)
+                </div>
+                <p><strong>Softmax</strong> converts raw scores (logits) into probabilities. The highest probability indicates the model's prediction for the digit class.</p>
+            </div>
+        </div>
+        
+        <div class="activation-demo">
+            <div class="activation-chart">
+                <h4>ReLU Activation</h4>
+                <canvas id="reluChart" width="200" height="150"></canvas>
+            </div>
+            <div class="activation-chart">
+                <h4>Softmax Probabilities</h4>
+                <div class="probability-bars" id="probabilityBars"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dropoutEnabled = true;
+        let dropoutRate = 0.5;
+        let currentActivations = {};
+        let networkSVG;
+        
+        // Initialize network
+        function initializeNetwork() {
+            createLayers();
+            createConnections();
+            drawReLUChart();
+            updateProbabilityBars();
+        }
+        
+        // Create neuron layers
+        function createLayers() {
+            const layers = {
+                'inputLayer': { count: 12, type: 'input' },
+                'hiddenLayer1': { count: 12, type: 'hidden' },
+                'dropoutLayer': { count: 12, type: 'dropout' },
+                'hiddenLayer2': { count: 8, type: 'hidden' },
+                'outputLayer': { count: 10, type: 'output' }
+            };
+            
+            Object.entries(layers).forEach(([layerId, config]) => {
+                const container = document.getElementById(layerId);
+                container.innerHTML = '';
+                
+                for (let i = 0; i < config.count; i++) {
+                    const neuron = document.createElement('div');
+                    neuron.className = `neuron ${config.type}`;
+                    neuron.id = `${layerId}_${i}`;
+                    
+                    if (config.type === 'output') {
+                        neuron.textContent = i;
+                    } else {
+                        neuron.textContent = '';
+                    }
+                    
+                    neuron.addEventListener('click', () => highlightNeuron(layerId, i));
+                    container.appendChild(neuron);
+                }
+            });
+        }
+        
+        // Create SVG connections
+        function createConnections() {
+            const svg = document.getElementById('networkSVG');
+            const container = document.querySelector('.network-container');
+            svg.setAttribute('width', container.scrollWidth);
+            svg.setAttribute('height', container.scrollHeight);
+            
+            // Create connections between layers (simplified view)
+            const connections = [
+                ['inputLayer', 'hiddenLayer1'],
+                ['hiddenLayer1', 'dropoutLayer'],
+                ['dropoutLayer', 'hiddenLayer2'],
+                ['hiddenLayer2', 'outputLayer']
+            ];
+            
+            connections.forEach(([fromLayer, toLayer]) => {
+                createLayerConnections(fromLayer, toLayer);
+            });
+        }
+        
+        // Create connections between two layers
+        function createLayerConnections(fromLayerId, toLayerId) {
+            const fromNeurons = document.querySelectorAll(`#${fromLayerId} .neuron`);
+            const toNeurons = document.querySelectorAll(`#${toLayerId} .neuron`);
+            const svg = document.getElementById('networkSVG');
+            
+            // Create sample connections (not all to avoid clutter)
+            fromNeurons.forEach((fromNeuron, i) => {
+                if (i % 2 === 0) { // Show every other connection
+                    toNeurons.forEach((toNeuron, j) => {
+                        if (j % 2 === 0) {
+                            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            
+                            const fromRect = fromNeuron.getBoundingClientRect();
+                            const toRect = toNeuron.getBoundingClientRect();
+                            const containerRect = document.querySelector('.network-container').getBoundingClientRect();
+                            
+                            line.setAttribute('x1', fromRect.left - containerRect.left + fromRect.width / 2);
+                            line.setAttribute('y1', fromRect.top - containerRect.top + fromRect.height / 2);
+                            line.setAttribute('x2', toRect.left - containerRect.left + toRect.width / 2);
+                            line.setAttribute('y2', toRect.top - containerRect.top + toRect.height / 2);
+                            
+                            line.className = 'connection';
+                            line.id = `connection_${fromLayerId}_${i}_${toLayerId}_${j}`;
+                            
+                            svg.appendChild(line);
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Simulate forward pass
+        function simulateForwardPass() {
+            resetNetwork();
+            
+            // Step 1: Input activation
+            setTimeout(() => activateLayer('inputLayer', 'Input data loaded'), 500);
+            
+            // Step 2: Hidden layer 1 with ReLU
+            setTimeout(() => {
+                activateLayer('hiddenLayer1', 'Dense layer with ReLU activation');
+                applyReLU('hiddenLayer1');
+            }, 1500);
+            
+            // Step 3: Dropout
+            setTimeout(() => {
+                if (dropoutEnabled) {
+                    applyDropout('dropoutLayer');
+                }
+            }, 2500);
+            
+            // Step 4: Hidden layer 2
+            setTimeout(() => {
+                activateLayer('hiddenLayer2', 'Second hidden layer');
+                applyReLU('hiddenLayer2');
+            }, 3500);
+            
+            // Step 5: Output layer with Softmax
+            setTimeout(() => {
+                activateLayer('outputLayer', 'Softmax probabilities');
+                applySoftmax();
+            }, 4500);
+        }
+        
+        // Activate layer
+        function activateLayer(layerId, message) {
+            const neurons = document.querySelectorAll(`#${layerId} .neuron`);
+            neurons.forEach(neuron => {
+                neuron.classList.add('active');
+            });
+            
+            // Show message
+            showMessage(message);
+        }
+        
+        // Apply ReLU activation
+        function applyReLU(layerId) {
+            const neurons = document.querySelectorAll(`#${layerId} .neuron`);
+            neurons.forEach((neuron, i) => {
+                // Randomly set some neurons to zero (negative inputs)
+                if (Math.random() < 0.2) {
+                    neuron.classList.add('relu-zero');
+                    neuron.classList.remove('active');
+                }
+            });
+        }
+        
+        // Apply dropout
+        function applyDropout(layerId) {
+            const neurons = document.querySelectorAll(`#${layerId} .neuron`);
+            neurons.forEach((neuron, i) => {
+                if (Math.random() < dropoutRate) {
+                    neuron.classList.add('dropout');
+                    neuron.classList.remove('active');
+                }
+            });
+            
+            showMessage(`Dropout applied: ${Math.round(dropoutRate * 100)}% of neurons disabled`);
+        }
+        
+        // Apply softmax and show prediction
+        function applySoftmax() {
+            const neurons = document.querySelectorAll('#outputLayer .neuron');
+            const probabilities = generateSoftmaxProbabilities();
+            
+            let maxProb = 0;
+            let predictedDigit = 0;
+            
+            neurons.forEach((neuron, i) => {
+                const prob = probabilities[i];
+                if (prob > maxProb) {
+                    maxProb = prob;
+                    predictedDigit = i;
+                }
+            });
+            
+            // Highlight predicted digit
+            neurons[predictedDigit].classList.add('predicted');
+            
+            // Update probability bars
+            updateProbabilityBars(probabilities);
+            
+            showMessage(`Predicted digit: ${predictedDigit} (${Math.round(maxProb * 100)}% confidence)`);
+        }
+        
+        // Generate softmax probabilities
+        function generateSoftmaxProbabilities() {
+            // Generate random logits
+            const logits = Array.from({ length: 10 }, () => Math.random() * 10 - 5);
+            
+            // Apply softmax
+            const expLogits = logits.map(x => Math.exp(x));
+            const sumExp = expLogits.reduce((a, b) => a + b, 0);
+            return expLogits.map(x => x / sumExp);
+        }
+        
+        // Update probability bars
+        function updateProbabilityBars(probabilities = null) {
+            const container = document.getElementById('probabilityBars');
+            container.innerHTML = '';
+            
+            if (!probabilities) {
+                probabilities = Array.from({ length: 10 }, () => Math.random() * 0.1);
+            }
+            
+            probabilities.forEach((prob, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'prob-bar';
+                bar.innerHTML = `
+                    <div class="prob-label">${i}</div>
+                    <div class="prob-fill">
+                        <div class="prob-value" style="width: ${prob * 100}%">
+                            <div class="prob-text">${(prob * 100).toFixed(1)}%</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(bar);
+            });
+        }
+        
+        // Draw ReLU chart
+        function drawReLUChart() {
+            const canvas = document.getElementById('reluChart');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(100, 20);
+            ctx.lineTo(100, 130);
+            ctx.lineTo(180, 130);
+            ctx.stroke();
+            
+            // Draw ReLU function
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(20, 130);
+            ctx.lineTo(100, 130);
+            ctx.lineTo(180, 50);
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = '12px Arial';
+            ctx.fillText('ReLU(x)', 120, 40);
+            ctx.fillText('x', 160, 145);
+            ctx.fillText('0', 95, 145);
+            ctx.fillText('f(x)', 80, 30);
+        }
+        
+        // Toggle dropout
+        function toggleDropout() {
+            dropoutEnabled = !dropoutEnabled;
+            const btn = event.target;
+            btn.classList.toggle('active');
+            btn.textContent = dropoutEnabled ? '🎯 Dropout ON' : '🎯 Dropout OFF';
+        }
+        
+        // Update dropout rate
+        function updateDropoutRate() {
+            const slider = document.getElementById('dropoutSlider');
+            dropoutRate = parseFloat(slider.value);
+            document.getElementById('dropoutValue').textContent = dropoutRate.toFixed(1);
+            document.getElementById('dropoutRateInfo').textContent = `${Math.round(dropoutRate * 100)}%`;
+        }
+        
+        // Show message
+        function showMessage(message) {
+            // You could implement a toast notification here
+            console.log(message);
+        }
+        
+        // Highlight neuron
+        function highlightNeuron(layerId, neuronIndex) {
+            const neuron = document.getElementById(`${layerId}_${neuronIndex}`);
+            neuron.style.animation = 'pulse 1s';
+            setTimeout(() => {
+                neuron.style.animation = '';
+            }, 1000);
+        }
+        
+        // Reset network
+        function resetNetwork() {
+            const neurons = document.querySelectorAll('.neuron');
+            neurons.forEach(neuron => {
+                neuron.classList.remove('active', 'dropout', 'relu-zero', 'predicted');
+            });
+            
+            updateProbabilityBars();
+        }
+        
+        // Demo functions
+        function showActivations() {
+            alert('Click on any neuron to see its activation! The network shows simplified connections for clarity.');
+        }
+        
+        function demonstrateReLU() {
+            alert('ReLU activation function:\n- Positive inputs pass through unchanged\n- Negative inputs become zero\n- This adds non-linearity to the network');
+        }
+        
+        function demonstrateSoftmax() {
+            alert('Softmax activation:\n- Converts logits to probabilities\n- All probabilities sum to 1.0\n- Highest probability = predicted class');
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', initializeNetwork);
+        window.addEventListener('resize', () => {
+            setTimeout(createConnections, 100);
+        });
+    </script>
+</body>
+</html>
